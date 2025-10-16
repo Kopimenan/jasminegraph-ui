@@ -19,7 +19,7 @@ import path from 'path';
 // Configure multer storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'app/caches/'); // Specify the folder to save files
+    cb(null, 'caches/'); // Specify the folder to save files
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname)); // Save file with a unique name

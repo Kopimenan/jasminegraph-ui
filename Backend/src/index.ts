@@ -41,7 +41,7 @@ const server = http.createServer(app);
 
 setupWebSocket(server);
 
-app.use('/public', express.static('public'));
+app.use('/public', express.static('/app/caches'));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
