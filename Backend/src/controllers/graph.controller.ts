@@ -14,6 +14,7 @@ limitations under the License.
 const { TelnetSocket } = require('telnet-stream');
 const net = require('net');
 import { Request, Response } from 'express';
+import { execSync } from 'child_process';
 import { 
   GRAPH_REMOVE_COMMAND, 
   GRAPH_UPLOAD_COMMAND, 
@@ -35,6 +36,18 @@ export type IConnection = {
 }
 
 const DEV_MODE = process.env.DEV_MODE === 'true';
+
+function getHostIP(): string {
+    try {
+        const gateway = execSync("ip route | grep default | awk '{print $3}'")
+            .toString()
+            .trim();
+        return gateway;
+    } catch (err) {
+        console.error("Failed to detect host IP, falling back to localhost", err);
+        return "127.0.0.1";
+    }
+}
 
 export const getClusterDetails = async (req: Request) => {
   const clusterID = req.header('Cluster-ID');
@@ -148,7 +161,8 @@ const uploadGraph = async (req: Request, res: Response) => {
   }
   const { graphName } = req.body;
   const fileName = req.file?.filename;
-  const filePath = DEV_MODE ? "http://host.docker.internal:8080/public/" + fileName : fileName; // Get the file path
+  const hostIp = DEV_MODE ? getHostIP() : '127.0.0.1';
+  const filePath = DEV_MODE ? "http://" + hostIp + ':8080/public/' + fileName : fileName; // Get the file path
 
   console.log(GRAPH_UPLOAD_COMMAND + '|' + graphName + '|' + filePath + '\n');
 
