@@ -75,7 +75,8 @@ export default function GraphUpload() {
       // Send the file and filename with Axios POST request
       axios.post('/backend/graph/upload', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Cluster-ID': localStorage.getItem('selectedCluster')
         }
       })
       .then(response => {
