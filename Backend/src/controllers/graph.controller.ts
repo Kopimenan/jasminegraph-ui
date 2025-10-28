@@ -21,7 +21,8 @@ import {
   GRAPH_DATA_COMMAND,
   LIST_COMMAND, 
   TRIANGLE_COUNT_COMMAND, 
-  PROPERTIES_COMMAND} from './../constants/frontend.server.constants';
+  PROPERTIES_COMMAND,
+  UPLOAD_FROM_HDFS} from './../constants/frontend.server.constants';
 import { ErrorCode, ErrorMsg } from '../constants/error.constants';
 import { getClusterByIdRepo } from '../repository/cluster.repository';
 import { HTTP, TIMEOUT } from '../constants/constants';
@@ -296,4 +297,63 @@ const getGraphData = async (req, res) => {
   }
 }
 
-export { getGraphList, uploadGraph, removeGraph, triangleCount, getGraphVisualization, getGraphData, getClusterProperties };
+const getDataFromHadoop = async (req: Request, res: Response) => {
+    const { ip, uiPort,path } = req.query;
+    if (!ip || !uiPort || !path) {
+        return res.status(400).json({ error: 'Missing ip or port parameter' });
+    }
+    try {
+        const hadoopUrl = `http://${ip}:${uiPort}/webhdfs/v1/${path}?op=LISTSTATUS`;
+        const response = await fetch(hadoopUrl);
+        if (!response.ok) {
+            return res.status(response.status).json({ error: 'Failed to fetch from Hadoop' });
+        }
+        const data = await response.json();
+        // filer out data to pathSuffix only
+        // const fileToWrite = '/home/kopimenan/FYP_Fork/jasminegraph/env/config/hdfs_config.txt'; // specify your file path here
+        // fs.writeFileSync(fileToWrite, `hdfs.host=${ip}\nhdfs.port=9000\n`, { encoding: 'utf8' });
+        data.FileStatuses.FileStatus = data.FileStatuses.FileStatus.map((file) => ({ pathSuffix: file.pathSuffix, type: file.type }));
+        res.status(200).json(data.FileStatuses.FileStatus);
+        console.log(data);
+    } catch (err) {
+        res.status(500).json({ error: 'Error connecting to Hadoop', details: err });
+    }
+};
+
+const upload_from_hdfs = async (req: Request, res: Response) => {
+    const connection = await getClusterDetails(req);
+    if (!(connection.host || connection.port)) {
+        return res.status(404).send(connection);
+    }
+    const {hadoopIp, hadoopPort, hadoopFilePath, isEdgeList, isDirected} = req.body;
+    const command = UPLOAD_FROM_HDFS + '|n|' + hadoopIp + '|' + hadoopPort + '|' + isEdgeList + '|' + isDirected + '|' + hadoopFilePath + '\n'
+    console.log(command);
+
+    try {
+        telnetConnection({host: connection.host, port: connection.port})(() => {
+            let commandOutput = "";
+            tSocket.on("data", (buffer) => {
+                commandOutput += buffer.toString("utf8");
+            });
+
+            tSocket.write(command, "utf8", () => {
+                setTimeout(() => {
+                    if (commandOutput) {
+                        console.log(new Date().toLocaleString() + " - UPLOAD " + req.body.filePath + " - " + commandOutput);
+                        res.status(HTTP[200]).send(commandOutput);
+                    } else {
+                        res.status(HTTP[400]).send({
+                            code: ErrorCode.NoResponseFromServer,
+                            message: ErrorMsg.NoResponseFromServer,
+                            errorDetails: ErrorMsg.NoResponseFromServer
+                        });
+                    }
+                }, TIMEOUT.default); // Adjust timeout to wait for the server response if needed
+            });
+        });
+    } catch (err) {
+        return res.status(HTTP[200]).send({code: ErrorCode.ServerError, message: ErrorMsg.ServerError, errorDetails: err});
+    }
+};
+
+export { getGraphList, uploadGraph, removeGraph, triangleCount, getGraphVisualization, getGraphData, getClusterProperties, getDataFromHadoop, upload_from_hdfs };
