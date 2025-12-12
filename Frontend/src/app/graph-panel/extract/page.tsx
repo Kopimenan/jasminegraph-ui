@@ -210,7 +210,14 @@ export default function GraphUpload() {
                     <Typography.Title level={4} style={{ margin: "20px 0px" }}>
                         Extract Graph Data:
                     </Typography.Title>
-                    <Dragger multiple={false} maxCount={1} beforeUpload={(file: RcFile) => handleFileUpload(file)}>
+                    <Dragger multiple={false} maxCount={1} accept=".pdf,.txt" beforeUpload={(file: RcFile) => {
+                        const allowedTypes = ["application/pdf", "text/plain"];
+                        const ext = file.name.split(".").pop()?.toLowerCase();
+
+                        if (!allowedTypes.includes(file.type) && !["pdf", "txt"].includes(ext || "")) {
+                            message.error("Only PDF and TXT files are allowed!");
+                            return Upload.LIST_IGNORE;}
+                        handleFileUpload(file)}}>
                         <p className="ant-upload-drag-icon"><InboxOutlined /></p>
                         <p className="ant-upload-text">Click or drag file to this area to upload</p>
                     </Dragger>
