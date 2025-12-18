@@ -77,6 +77,8 @@ export default function GraphUpload() {
     const [clientId, setClientID] = useState<string>('');
     const [showMeta, setShowMeta] = useState<string>("");
     const [pausedGraphs, setPausedGraphs] = useState<Record<string, boolean>>({});
+    const [textFileName, setTextFileName] = useState<string>("");
+
 
 
     const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(WS_URL, { share: true, shouldReconnect: (closeEvent) => true });
@@ -108,10 +110,10 @@ export default function GraphUpload() {
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('graphName', graphName);
+        formData.append('textFileName', textFileName);
 
         try {
-            await axios.post('/backend/graph/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+            await axios.post('/backend/graph/file-upload', formData, { headers: { 'Content-Type': 'multipart/form-data', 'Cluster-ID': localStorage.getItem('selectedCluster') } });
             message.success("File uploaded successfully");
         } catch (error) {
             message.error("Failed to upload file");
@@ -224,8 +226,8 @@ export default function GraphUpload() {
 
                     <Modal title="Extract Graph" centered open={modalOpen} onOk={() => setModalOpen(false)} onCancel={() => setModalOpen(false)} footer={null}>
                         <div className="flex whitespace-nowrap gap-4 mt-5">
-                            <div>Graph Name:</div>
-                            <Input value={graphName} onChange={(event) => setGraphName(event.currentTarget.value)} />
+                            <div>Text file Name:</div>
+                            <Input value={textFileName} onChange={(event) => setTextFileName(event.currentTarget.value)} />
                         </div>
                         <Button type="primary" style={{ margin: "20px 0px", width: "100%" }} onClick={handleUpload}>
                             Upload
